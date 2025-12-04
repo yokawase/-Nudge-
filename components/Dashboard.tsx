@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { SimulationResult, UserData } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp, Check, X as XIcon, Twitter, MessageCircle, MoreHorizontal } from 'lucide-react';
 import StomachCancerRisk from './StomachCancerRisk';
 
 interface Props { result: SimulationResult; userData: UserData; }
@@ -42,10 +42,83 @@ const RiskFactorTable = () => {
     );
 };
 
+// Custom Share Modal Component
+const ShareModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    shareText: string;
+    appUrl: string;
+    onCopy: () => void;
+}> = ({ isOpen, onClose, shareText, appUrl, onCopy }) => {
+    if (!isOpen) return null;
+
+    const encodedText = encodeURIComponent(shareText);
+    const lineUrl = `https://line.me/R/msg/text/?${encodedText}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
+    
+    // Check if Web Share API is available
+    const canUseWebShare = typeof navigator !== 'undefined' && !!navigator.share;
+
+    const handleWebShare = async () => {
+        try {
+            await navigator.share({
+                title: 'Precision Health 診断結果',
+                text: shareText,
+                url: appUrl,
+            });
+            onClose();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-700">診断結果をシェア</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
+                        <XIcon className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-6 grid grid-cols-2 gap-4">
+                    <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-[#06c755] text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
+                        <MessageCircle className="w-8 h-8" />
+                        <span className="font-bold text-sm">LINE</span>
+                    </a>
+                    <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-black text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
+                        <Twitter className="w-8 h-8" />
+                        <span className="font-bold text-sm">X (Twitter)</span>
+                    </a>
+                    <button onClick={() => { onCopy(); onClose(); }} className="flex flex-col items-center justify-center p-4 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors gap-2">
+                        <Copy className="w-8 h-8 text-slate-500" />
+                        <span className="font-bold text-sm">コピー</span>
+                    </button>
+                    {canUseWebShare ? (
+                        <button onClick={handleWebShare} className="flex flex-col items-center justify-center p-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors gap-2">
+                            <MoreHorizontal className="w-8 h-8" />
+                            <span className="font-bold text-sm">その他のアプリ</span>
+                        </button>
+                    ) : (
+                         <div className="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-lg gap-2 opacity-50 cursor-not-allowed">
+                            <MoreHorizontal className="w-8 h-8 text-slate-300" />
+                            <span className="font-bold text-xs text-slate-400">その他 (未対応)</span>
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 bg-slate-50 text-xs text-slate-400 text-center border-t border-slate-100">
+                    Precision Health Manager
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   const formatMoney = (val: number) => `¥${Math.floor(val).toLocaleString()}`;
   const formatRange = (min: number, max: number) => `変動範囲: ${formatMoney(min)} 〜 ${formatMoney(max)}`;
@@ -109,29 +182,7 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
     }
   };
 
-  const handleShare = async () => {
-    const shareData = {
-        title: 'Precision Health 診断結果',
-        text: shareText,
-        url: appUrl,
-    };
-
-    if (navigator.share) {
-        try {
-            await navigator.share(shareData);
-        } catch (err: any) {
-            if (err.name === 'AbortError') return; // User canceled
-            console.error('Share failed:', err);
-            await copyResult(true);
-            showActionFeedback("シェアに失敗したため、コピーしました");
-        }
-    } else {
-        await copyResult(true);
-        showActionFeedback("シェア未対応のため、コピーしました");
-    }
-  };
-
-  const downloadReport = () => {
+  const handleDownloadReport = () => {
     const dateStr = new Date().toLocaleDateString("ja-JP");
     const bmi = (userData.weight / Math.pow(userData.height / 100, 2)).toFixed(1);
     const reportContent = `
@@ -317,13 +368,13 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
       {/* Action Buttons with Feedback */}
       <div className="space-y-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button onClick={handleShare} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors">
+            <button onClick={() => setIsShareModalOpen(true)} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors">
                 <Share2 className="w-5 h-5" /> 結果をシェア
             </button>
             <button onClick={() => copyResult(false)} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors">
                 <Copy className="w-5 h-5" /> 結果をコピー
             </button>
-            <button onClick={downloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group">
+            <button onClick={handleDownloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group">
                 <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl">Pro Feature</div>
                 <Download className="w-5 h-5" /> レポート保存 (.txt)
             </button>
@@ -336,6 +387,14 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
             </div>
         )}
       </div>
+
+      <ShareModal 
+        isOpen={isShareModalOpen} 
+        onClose={() => setIsShareModalOpen(false)} 
+        shareText={shareText} 
+        appUrl={appUrl}
+        onCopy={() => copyResult(false)}
+      />
       
       {/* Support Section */}
       <div className="text-center pt-8 border-t border-slate-200">
