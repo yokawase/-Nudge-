@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { SimulationResult, UserData } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import StomachCancerRisk from './StomachCancerRisk';
 
 interface Props { result: SimulationResult; userData: UserData; }
@@ -44,15 +45,68 @@ const RiskFactorTable = () => {
 const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
+  
   const formatMoney = (val: number) => `¥${Math.floor(val).toLocaleString()}`;
   const formatRange = (min: number, max: number) => `変動範囲: ${formatMoney(min)} 〜 ${formatMoney(max)}`;
   const dSign = result.diff >= 0 ? "+" : "";
   const shareText = `【Precision Health】診断結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n平均との差: ${dSign}${result.diff}年\n寿命中央値: ${result.median}歳\n#PrecisionHealth #健康資産`;
   const appUrl = "https://precision-health.netlify.app/";
 
-  const copyResult = () => {
+  const showActionFeedback = (msg: string, type: 'success' | 'error' = 'success') => {
+      setActionFeedback({ msg, type });
+      setTimeout(() => setActionFeedback(null), 3000);
+  };
+
+  const copyResult = async (silent = false) => {
     const text = `精密余命予測結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n寿命中央値: ${result.median}歳\n平均との差: ${dSign}${result.diff}年\n${appUrl}`;
-    navigator.clipboard.writeText(text).then(() => alert("結果をコピーしました"));
+    
+    const success = () => !silent && showActionFeedback("クリップボードにコピーしました");
+    const fail = () => !silent && showActionFeedback("コピーに失敗しました", 'error');
+
+    // 1. Try Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            success();
+            return;
+        } catch (e) {
+            console.warn("Clipboard API failed, trying fallback...", e);
+        }
+    }
+
+    // 2. Fallback: execCommand
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Mobile/iOS friendly hidden style
+        textArea.style.position = "fixed";
+        textArea.style.left = "0";
+        textArea.style.top = "0";
+        textArea.style.opacity = "0";
+        textArea.style.pointerEvents = "none";
+        textArea.setAttribute("readonly", ""); // Prevent keyboard
+        
+        document.body.appendChild(textArea);
+        
+        // Select text
+        textArea.focus();
+        textArea.select();
+        textArea.setSelectionRange(0, 99999); // iOS fix
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+            success();
+        } else {
+            fail();
+        }
+    } catch (err) {
+        console.error("Copy fallback failed:", err);
+        fail();
+    }
   };
 
   const handleShare = async () => {
@@ -65,13 +119,15 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
     if (navigator.share) {
         try {
             await navigator.share(shareData);
-        } catch (err) {
-            console.log('Share canceled or failed', err);
+        } catch (err: any) {
+            if (err.name === 'AbortError') return; // User canceled
+            console.error('Share failed:', err);
+            await copyResult(true);
+            showActionFeedback("シェアに失敗したため、コピーしました");
         }
     } else {
-        // Fallback for browsers that don't support Web Share API
-        copyResult();
-        alert("お使いの環境はシェア機能に対応していないため、結果をクリップボードにコピーしました。");
+        await copyResult(true);
+        showActionFeedback("シェア未対応のため、コピーしました");
     }
   };
 
@@ -114,12 +170,7 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
 
   const handleFeedbackSubmit = () => {
     if(!feedbackText.trim()) return;
-    
-    // SaaS Best Practice:
-    // フィードバックはユーザーの手を止めないよう、アプリ内（API等）で非同期送信するのが鉄則です。
-    // メーラーを起動(mailto)させると離脱率が高まるため、ここでは送信完了のUIのみシミュレーションします。
     console.log("Feedback collected (Simulated API):", feedbackText);
-    
     setFeedbackSent(true);
     setTimeout(() => { setFeedbackSent(false); setFeedbackText(""); }, 3000);
   };
@@ -252,7 +303,7 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
         </div>
       </div>
       
-      {/* Feedback Section (In-App Database Simulation) - Best for NPS/Comments */}
+      {/* Feedback Section */}
       <div className="bg-slate-100 rounded-lg p-6 border border-slate-200">
          <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><ThumbsUp className="w-4 h-4" /> この分析は役に立ちましたか？</h4>
          <p className="text-xs text-slate-500 mb-3">サービス改善のため、一言フィードバックを頂けると幸いです（アプリ内で送信されます）。</p>
@@ -263,13 +314,30 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
          {feedbackSent && <span className="text-xs text-green-600 mt-2 block">フィードバックを送信しました。ありがとうございます！</span>}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <button onClick={handleShare} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors"><Share2 className="w-5 h-5" /> 結果をシェア</button>
-         <button onClick={copyResult} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors"><Copy className="w-5 h-5" /> 結果をコピー</button>
-         <button onClick={downloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group"><div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl">Pro Feature</div><Download className="w-5 h-5" /> レポート保存 (.txt)</button>
+      {/* Action Buttons with Feedback */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button onClick={handleShare} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors">
+                <Share2 className="w-5 h-5" /> 結果をシェア
+            </button>
+            <button onClick={() => copyResult(false)} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors">
+                <Copy className="w-5 h-5" /> 結果をコピー
+            </button>
+            <button onClick={downloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group">
+                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl">Pro Feature</div>
+                <Download className="w-5 h-5" /> レポート保存 (.txt)
+            </button>
+        </div>
+        {/* Action Feedback Toast */}
+        {actionFeedback && (
+            <div className={`text-center text-sm font-bold py-2 rounded animate-fade-in ${actionFeedback.type === 'error' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                {actionFeedback.type === 'success' && <Check className="w-4 h-4 inline mr-1" />}
+                {actionFeedback.msg}
+            </div>
+        )}
       </div>
       
-      {/* Support Section (Gmail/Mailto) - Best for Inquiries */}
+      {/* Support Section */}
       <div className="text-center pt-8 border-t border-slate-200">
           <p className="text-xs text-slate-400 mb-2">ご不明点や詳細なサポートが必要ですか？</p>
           <a href="mailto:support@precision-health.demo?subject=【Precision Health】お問い合わせ" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors">
