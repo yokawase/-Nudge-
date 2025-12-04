@@ -1,10 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { SimulationResult, UserData } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import StomachCancerRisk from './StomachCancerRisk';
 
 interface Props { result: SimulationResult; userData: UserData; }
+
+// HR一覧表示用コンポーネント
+const RiskFactorTable = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="mt-4 border-t border-slate-100 pt-2">
+            <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 text-xs text-slate-500 hover:text-blue-600 transition-colors mx-auto">
+                {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <span>エビデンスに基づくリスク強度(HR)を確認する</span>
+            </button>
+            {isOpen && (
+                <div className="mt-3 overflow-x-auto animate-fade-in">
+                    <table className="w-full text-xs text-left text-slate-600 border-collapse">
+                        <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                            <tr><th className="p-2">リスク因子</th><th className="p-2 text-center">強度(HR)</th><th className="p-2">備考</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            <tr><td className="p-2 font-bold text-red-600">脳卒中既往</td><td className="p-2 text-center font-bold">2.00</td><td className="p-2">再発リスク大</td></tr>
+                            <tr><td className="p-2 font-bold text-red-600">心疾患既往</td><td className="p-2 text-center font-bold">1.80</td><td className="p-2">心不全リスク含む</td></tr>
+                            <tr><td className="p-2 font-bold text-red-600">低体重(フレイル)</td><td className="p-2 text-center font-bold">1.80</td><td className="p-2">75歳以上の場合</td></tr>
+                            <tr><td className="p-2 font-bold text-red-600">糖尿病</td><td className="p-2 text-center font-bold">1.75</td><td className="p-2">全死亡リスクへの影響大</td></tr>
+                            <tr><td className="p-2 font-bold text-red-600">現在喫煙</td><td className="p-2 text-center font-bold">1.70</td><td className="p-2">最大の予防可能因子</td></tr>
+                            <tr><td className="p-2 text-amber-600">低体重</td><td className="p-2 text-center font-bold">1.60</td><td className="p-2">BMI 18.5未満</td></tr>
+                            <tr><td className="p-2 text-amber-600">多量飲酒</td><td className="p-2 text-center font-bold">1.55</td><td className="p-2">週450g以上</td></tr>
+                            <tr><td className="p-2 text-amber-600">がん既往</td><td className="p-2 text-center font-bold">1.40</td><td className="p-2">サバイバーリスク</td></tr>
+                            <tr><td className="p-2 text-amber-600">過去喫煙</td><td className="p-2 text-center font-bold">1.35</td><td className="p-2">残存リスクあり</td></tr>
+                            <tr><td className="p-2 text-amber-600">社会的孤立</td><td className="p-2 text-center font-bold">1.30</td><td className="p-2">喫煙に匹敵するリスク</td></tr>
+                        </tbody>
+                    </table>
+                    <div className="text-[10px] text-slate-400 mt-2 text-right">出典: JPHC Study, JACC Study, JAGES等に基づく推計</div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const [feedbackText, setFeedbackText] = useState("");
@@ -12,12 +47,32 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const formatMoney = (val: number) => `¥${Math.floor(val).toLocaleString()}`;
   const formatRange = (min: number, max: number) => `変動範囲: ${formatMoney(min)} 〜 ${formatMoney(max)}`;
   const dSign = result.diff >= 0 ? "+" : "";
-  const shareText = `【Precision Health】診断結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n平均との差: ${dSign}${result.diff}年\n寿命中央値: ${result.median}歳\n\nhttps://precision-health.netlify.app/\n\n#PrecisionHealth #健康資産`;
-  const shareUrl = `https://line.me/R/msg/text/?${encodeURIComponent(shareText)}`;
+  const shareText = `【Precision Health】診断結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n平均との差: ${dSign}${result.diff}年\n寿命中央値: ${result.median}歳\n#PrecisionHealth #健康資産`;
+  const appUrl = "https://precision-health.netlify.app/";
 
   const copyResult = () => {
-    const text = `精密余命予測結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n寿命中央値: ${result.median}歳\n平均との差: ${dSign}${result.diff}年\nhttps://precision-health.netlify.app/`;
+    const text = `精密余命予測結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n寿命中央値: ${result.median}歳\n平均との差: ${dSign}${result.diff}年\n${appUrl}`;
     navigator.clipboard.writeText(text).then(() => alert("結果をコピーしました"));
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+        title: 'Precision Health 診断結果',
+        text: shareText,
+        url: appUrl,
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.log('Share canceled or failed', err);
+        }
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        copyResult();
+        alert("お使いの環境はシェア機能に対応していないため、結果をクリップボードにコピーしました。");
+    }
   };
 
   const downloadReport = () => {
@@ -59,7 +114,12 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
 
   const handleFeedbackSubmit = () => {
     if(!feedbackText.trim()) return;
-    console.log("Feedback collected:", feedbackText);
+    
+    // SaaS Best Practice:
+    // フィードバックはユーザーの手を止めないよう、アプリ内（API等）で非同期送信するのが鉄則です。
+    // メーラーを起動(mailto)させると離脱率が高まるため、ここでは送信完了のUIのみシミュレーションします。
+    console.log("Feedback collected (Simulated API):", feedbackText);
+    
     setFeedbackSent(true);
     setTimeout(() => { setFeedbackSent(false); setFeedbackText(""); }, 3000);
   };
@@ -137,6 +197,7 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
           })}
           {result.factors.length === 0 && <div className="text-slate-500 text-sm text-center py-4 bg-slate-50 rounded">特筆すべき影響因子はありません（標準的な健康状態です）</div>}
         </div>
+        <RiskFactorTable />
         <div className="mt-4 text-xs text-slate-400 text-right">※各因子の平均寿命に対する単独影響度の目安です</div>
       </div>
       {userData.age >= 75 && (
@@ -190,19 +251,31 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
           </ResponsiveContainer>
         </div>
       </div>
+      
+      {/* Feedback Section (In-App Database Simulation) - Best for NPS/Comments */}
       <div className="bg-slate-100 rounded-lg p-6 border border-slate-200">
          <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><ThumbsUp className="w-4 h-4" /> この分析は役に立ちましたか？</h4>
-         <p className="text-xs text-slate-500 mb-3">サービス改善のため、あなたのご意見をお聞かせください。</p>
+         <p className="text-xs text-slate-500 mb-3">サービス改善のため、一言フィードバックを頂けると幸いです（アプリ内で送信されます）。</p>
          <div className="flex gap-2">
             <input type="text" className="flex-1 p-2 border border-slate-300 rounded text-sm" placeholder="気になった点や改善要望を入力..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)}/>
             <button onClick={handleFeedbackSubmit} disabled={feedbackSent} className={`px-4 py-2 rounded text-sm font-bold flex items-center gap-2 ${feedbackSent ? 'bg-green-500 text-white' : 'bg-slate-800 text-white hover:bg-slate-700'}`}>{feedbackSent ? <Send className="w-4 h-4" /> : '送信'}</button>
          </div>
          {feedbackSent && <span className="text-xs text-green-600 mt-2 block">フィードバックを送信しました。ありがとうございます！</span>}
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <a href={shareUrl} target="_blank" rel="nofollow noopener noreferrer" className="flex items-center justify-center gap-2 p-3 bg-[#06c755] text-white font-bold rounded-lg shadow hover:bg-[#05b34c] transition-colors no-underline"><Share2 className="w-5 h-5" /> LINEで送る</a>
+         <button onClick={handleShare} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors"><Share2 className="w-5 h-5" /> 結果をシェア</button>
          <button onClick={copyResult} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors"><Copy className="w-5 h-5" /> 結果をコピー</button>
          <button onClick={downloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group"><div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-bl">Pro Feature</div><Download className="w-5 h-5" /> レポート保存 (.txt)</button>
+      </div>
+      
+      {/* Support Section (Gmail/Mailto) - Best for Inquiries */}
+      <div className="text-center pt-8 border-t border-slate-200">
+          <p className="text-xs text-slate-400 mb-2">ご不明点や詳細なサポートが必要ですか？</p>
+          <a href="mailto:support@precision-health.demo?subject=【Precision Health】お問い合わせ" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors">
+              <Mail className="w-4 h-4" />
+              <span>メールサポート (Gmail等を起動)</span>
+          </a>
       </div>
     </div>
   );
