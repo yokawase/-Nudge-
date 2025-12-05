@@ -10,7 +10,7 @@ import { HeartPulse, Edit3, Stethoscope, BarChart2, Building2, UserCircle } from
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'input' | 'symptom'>('input');
   const [userData, setUserData] = useState<UserData>({
-    age: 40, sex: 'male', height: 170, weight: 65, alcohol: 'none', smoking: 'never', exercise: 'no',
+    age: 40, sex: 'male', height: 170, weight: 65, alcohol: 'none', smoking: 'never', cigarettesPerDay: 20, exercise: 'no',
     sleep: 'optimal', social: 'moderate', diet: 'average',
     pylori: 'unknown', atrophic_gastritis: 'unknown', polypharmacy: '0',
     fam_cancer: false, parent_long: false, allergy: false, hist_cancer: false, hist_stroke: false, hist_heart: false, dm: false, htn: false, dl: false, inf_hep: false, inf_hpv: false,

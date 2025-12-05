@@ -18,6 +18,7 @@ export interface UserData {
   weight: number;
   alcohol: Alcohol;
   smoking: Smoking;
+  cigarettesPerDay: number; // Added for precise HR
   exercise: Exercise;
   // New Fields
   sleep: Sleep;

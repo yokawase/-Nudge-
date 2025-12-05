@@ -70,10 +70,24 @@ export const runHealthAnalysis = (data: UserData): SimulationResult => {
     if (data.alcohol === 'moderate') factors.push({ label: "適度飲酒(Bonus)", hr: 0.9 });
     else if (data.alcohol === 'heavy') factors.push({ label: "多量飲酒", hr: 1.55 }); // Updated from 1.4 (J-curve ends)
 
-    // Smoking
+    // Smoking (Updated with Count-based HR)
     if (data.smoking === 'never') factors.push({ label: "非喫煙(Bonus)", hr: 0.85 });
-    else if (data.smoking === 'past') factors.push({ label: "過去喫煙", hr: 1.35 }); // Updated from 1.1 (Significant residual risk)
-    else factors.push({ label: "現在喫煙", hr: 1.7 }); // Updated from 1.6
+    else if (data.smoking === 'past') factors.push({ label: "過去喫煙", hr: 1.35 });
+    else {
+        // 現在喫煙: 本数によるリスク層別化
+        const count = data.cigarettesPerDay || 20;
+        let smokeHr = 1.7; // Default average
+        let label = `現在喫煙(${count}本)`;
+        
+        if (count < 10) {
+            smokeHr = 1.3;
+            label = `現在喫煙(軽/${count}本)`;
+        } else if (count >= 20) {
+            smokeHr = 2.2;
+            label = `現在喫煙(重/${count}本)`;
+        }
+        factors.push({ label, hr: smokeHr });
+    }
 
     // Exercise
     if (data.exercise === 'yes') factors.push({ label: "運動習慣(Bonus)", hr: 0.85 });
@@ -104,11 +118,11 @@ export const runHealthAnalysis = (data: UserData): SimulationResult => {
     if (data.fam_cancer) factors.push({ label: "がん家族歴", hr: 1.1 });
     if (data.parent_long) factors.push({ label: "親が長寿(Bonus)", hr: 0.85 });
     if (data.allergy) factors.push({ label: "アレルギー体質", hr: 1.0 }); // Neutral
-    
+
     if (data.hist_cancer) factors.push({ label: "がん既往", hr: 1.4 }); // Validated
     if (data.hist_stroke) factors.push({ label: "脳卒中既往", hr: 2.0 }); // Validated
     if (data.hist_heart) factors.push({ label: "心疾患既往", hr: 1.8 }); // Validated
-    
+
     if (data.dm) factors.push({ label: "糖尿病", hr: 1.75 }); // Updated from 1.3 (Critical update)
     if (data.htn) factors.push({ label: "高血圧", hr: 1.2 }); // Validated
     if (data.dl) factors.push({ label: "高脂血症", hr: 1.1 });
@@ -122,7 +136,7 @@ export const runHealthAnalysis = (data: UserData): SimulationResult => {
     if (hr_total > 1.0) {
         hr_total = 1.0 + (hr_total - 1.0) * 0.8;
     }
-    
+
     // Safety caps
     hr_total = Math.min(hr_total, 2.8); // Slightly increased cap due to higher base HRs (e.g. Stroke + Diabetes)
     hr_total = Math.max(hr_total, 0.4);
@@ -152,7 +166,7 @@ export const runHealthAnalysis = (data: UserData): SimulationResult => {
         if (immutable_factors.includes(f.label)) hr_ideal *= f.hr;
         else if (f.label.includes("Bonus")) hr_ideal *= f.hr;
     });
-    
+
     // Calculate potential gain by removing modifiable risks
     if (data.smoking !== 'never') hr_ideal *= 0.85; 
     if (data.exercise !== 'yes') hr_ideal *= 0.85; 

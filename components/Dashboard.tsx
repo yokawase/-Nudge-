@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
 import { SimulationResult, UserData } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp, Check, X as XIcon, Twitter, MessageCircle, MoreHorizontal } from 'lucide-react';
+import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, Info, ChevronDown, ChevronUp, Check, X as XIcon, Twitter, MessageCircle, MoreHorizontal, Users } from 'lucide-react';
 import StomachCancerRisk from './StomachCancerRisk';
 
 interface Props { result: SimulationResult; userData: UserData; }
@@ -23,15 +22,17 @@ const RiskFactorTable = () => {
                             <tr><th className="p-2">リスク因子</th><th className="p-2 text-center">強度(HR)</th><th className="p-2">備考</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
+                            <tr><td className="p-2 font-bold text-red-600">現在喫煙(重)</td><td className="p-2 text-center font-bold">2.20</td><td className="p-2">1日20本以上</td></tr>
                             <tr><td className="p-2 font-bold text-red-600">脳卒中既往</td><td className="p-2 text-center font-bold">2.00</td><td className="p-2">再発リスク大</td></tr>
                             <tr><td className="p-2 font-bold text-red-600">心疾患既往</td><td className="p-2 text-center font-bold">1.80</td><td className="p-2">心不全リスク含む</td></tr>
                             <tr><td className="p-2 font-bold text-red-600">低体重(フレイル)</td><td className="p-2 text-center font-bold">1.80</td><td className="p-2">75歳以上の場合</td></tr>
                             <tr><td className="p-2 font-bold text-red-600">糖尿病</td><td className="p-2 text-center font-bold">1.75</td><td className="p-2">全死亡リスクへの影響大</td></tr>
-                            <tr><td className="p-2 font-bold text-red-600">現在喫煙</td><td className="p-2 text-center font-bold">1.70</td><td className="p-2">最大の予防可能因子</td></tr>
+                            <tr><td className="p-2 font-bold text-red-600">現在喫煙(中)</td><td className="p-2 text-center font-bold">1.70</td><td className="p-2">1日10-19本</td></tr>
                             <tr><td className="p-2 text-amber-600">低体重</td><td className="p-2 text-center font-bold">1.60</td><td className="p-2">BMI 18.5未満</td></tr>
                             <tr><td className="p-2 text-amber-600">多量飲酒</td><td className="p-2 text-center font-bold">1.55</td><td className="p-2">週450g以上</td></tr>
                             <tr><td className="p-2 text-amber-600">がん既往</td><td className="p-2 text-center font-bold">1.40</td><td className="p-2">サバイバーリスク</td></tr>
                             <tr><td className="p-2 text-amber-600">過去喫煙</td><td className="p-2 text-center font-bold">1.35</td><td className="p-2">残存リスクあり</td></tr>
+                            <tr><td className="p-2 text-amber-600">現在喫煙(軽)</td><td className="p-2 text-center font-bold">1.30</td><td className="p-2">1日10本未満</td></tr>
                             <tr><td className="p-2 text-amber-600">社会的孤立</td><td className="p-2 text-center font-bold">1.30</td><td className="p-2">喫煙に匹敵するリスク</td></tr>
                         </tbody>
                     </table>
@@ -47,12 +48,16 @@ const ShareModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     shareText: string;
+    groupShareText: string;
     appUrl: string;
-    onCopy: () => void;
-}> = ({ isOpen, onClose, shareText, appUrl, onCopy }) => {
+    onCopy: (text: string) => void;
+}> = ({ isOpen, onClose, shareText, groupShareText, appUrl, onCopy }) => {
     if (!isOpen) return null;
 
-    const encodedText = encodeURIComponent(shareText);
+    const [mode, setMode] = useState<'normal' | 'group'>('normal');
+    const activeText = mode === 'normal' ? shareText : groupShareText;
+
+    const encodedText = encodeURIComponent(activeText);
     const lineUrl = `https://line.me/R/msg/text/?${encodedText}`;
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedText}`;
     
@@ -63,7 +68,7 @@ const ShareModal: React.FC<{
         try {
             await navigator.share({
                 title: 'Precision Health 診断結果',
-                text: shareText,
+                text: activeText,
                 url: appUrl,
             });
             onClose();
@@ -81,30 +86,49 @@ const ShareModal: React.FC<{
                         <XIcon className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-6 grid grid-cols-2 gap-4">
-                    <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-[#06c755] text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
-                        <MessageCircle className="w-8 h-8" />
-                        <span className="font-bold text-sm">LINE</span>
-                    </a>
-                    <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-black text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
-                        <Twitter className="w-8 h-8" />
-                        <span className="font-bold text-sm">X (Twitter)</span>
-                    </a>
-                    <button onClick={() => { onCopy(); onClose(); }} className="flex flex-col items-center justify-center p-4 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors gap-2">
-                        <Copy className="w-8 h-8 text-slate-500" />
-                        <span className="font-bold text-sm">コピー</span>
+                
+                {/* Tabs */}
+                <div className="flex border-b border-slate-100">
+                    <button onClick={() => setMode('normal')} className={`flex-1 py-3 text-sm font-bold transition-colors ${mode === 'normal' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        通常シェア
                     </button>
-                    {canUseWebShare ? (
-                        <button onClick={handleWebShare} className="flex flex-col items-center justify-center p-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors gap-2">
-                            <MoreHorizontal className="w-8 h-8" />
-                            <span className="font-bold text-sm">その他のアプリ</span>
-                        </button>
-                    ) : (
-                         <div className="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-lg gap-2 opacity-50 cursor-not-allowed">
-                            <MoreHorizontal className="w-8 h-8 text-slate-300" />
-                            <span className="font-bold text-xs text-slate-400">その他 (未対応)</span>
+                    <button onClick={() => setMode('group')} className={`flex-1 py-3 text-sm font-bold transition-colors ${mode === 'group' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:bg-slate-50'}`}>
+                        グループで比較 (挑戦状)
+                    </button>
+                </div>
+
+                <div className="p-6">
+                    {mode === 'group' && (
+                        <div className="mb-4 text-xs text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100">
+                             友人や家族のグループLINEに送信して、みんなで健康余命を競い合いましょう！
                         </div>
                     )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <a href={lineUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-[#06c755] text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
+                            <MessageCircle className="w-8 h-8" />
+                            <span className="font-bold text-sm">LINE</span>
+                        </a>
+                        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-4 bg-black text-white rounded-lg hover:opacity-90 transition-opacity gap-2">
+                            <Twitter className="w-8 h-8" />
+                            <span className="font-bold text-sm">X (Twitter)</span>
+                        </a>
+                        <button onClick={() => { onCopy(activeText); onClose(); }} className="flex flex-col items-center justify-center p-4 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors gap-2">
+                            <Copy className="w-8 h-8 text-slate-500" />
+                            <span className="font-bold text-sm">コピー</span>
+                        </button>
+                        {canUseWebShare ? (
+                            <button onClick={handleWebShare} className="flex flex-col items-center justify-center p-4 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors gap-2">
+                                <MoreHorizontal className="w-8 h-8" />
+                                <span className="font-bold text-sm">その他のアプリ</span>
+                            </button>
+                        ) : (
+                             <div className="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-lg gap-2 opacity-50 cursor-not-allowed">
+                                <MoreHorizontal className="w-8 h-8 text-slate-300" />
+                                <span className="font-bold text-xs text-slate-400">その他 (未対応)</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="p-4 bg-slate-50 text-xs text-slate-400 text-center border-t border-slate-100">
                     Precision Health Manager
@@ -120,19 +144,26 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const [actionFeedback, setActionFeedback] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
+  const currentYear = new Date().getFullYear();
+  const deathYear = Math.floor(currentYear + result.le);
   const formatMoney = (val: number) => `¥${Math.floor(val).toLocaleString()}`;
   const formatRange = (min: number, max: number) => `変動範囲: ${formatMoney(min)} 〜 ${formatMoney(max)}`;
   const dSign = result.diff >= 0 ? "+" : "";
-  const shareText = `【Precision Health】診断結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n平均との差: ${dSign}${result.diff}年\n寿命中央値: ${result.median}歳\n#PrecisionHealth #健康資産`;
   const appUrl = "https://precision-health.netlify.app/";
+  
+  // Normal Share Text
+  const shareText = `【Precision Health】診断結果\n到達予測: ${deathYear}年 (満${result.lifespan}歳)\n推定余命: あと${result.le}年\n平均との差: ${dSign}${result.diff}年\n#PrecisionHealth #ミライ査定`;
+  
+  // Group Challenge Share Text
+  const groupShareText = `【挑戦状】私の寿命予測は「${deathYear}年 (満${result.lifespan}歳)」でした！\n\nあなたの余命は西暦何年まで？\nグループのみんなでスコアを競ってみよう！\n\n診断はこちらから👇\n${appUrl}`;
 
   const showActionFeedback = (msg: string, type: 'success' | 'error' = 'success') => {
       setActionFeedback({ msg, type });
       setTimeout(() => setActionFeedback(null), 3000);
   };
 
-  const copyResult = async (silent = false) => {
-    const text = `精密余命予測結果\n年齢: ${userData.age}歳\n推定余命: ${result.le}年\n寿命中央値: ${result.median}歳\n平均との差: ${dSign}${result.diff}年\n${appUrl}`;
+  const copyResult = async (textToCopy: string, silent = false) => {
+    const fullText = `${textToCopy}\n${appUrl}`;
     
     const success = () => !silent && showActionFeedback("クリップボードにコピーしました");
     const fail = () => !silent && showActionFeedback("コピーに失敗しました", 'error');
@@ -140,7 +171,7 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
     // 1. Try Clipboard API
     if (navigator.clipboard && navigator.clipboard.writeText) {
         try {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(fullText);
             success();
             return;
         } catch (e) {
@@ -151,7 +182,7 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
     // 2. Fallback: execCommand
     try {
         const textArea = document.createElement("textarea");
-        textArea.value = text;
+        textArea.value = fullText;
         
         // Mobile/iOS friendly hidden style
         textArea.style.position = "fixed";
@@ -186,25 +217,21 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
     const dateStr = new Date().toLocaleDateString("ja-JP");
     const bmi = (userData.weight / Math.pow(userData.height / 100, 2)).toFixed(1);
     const reportContent = `
-============================================
-Precision Health Manager レポート
+Precision Health Manager (ミライ査定) レポート
 発行日: ${dateStr}
 URL: https://precision-health.netlify.app/
-============================================
 [基本情報]
 年齢: ${userData.age}歳 / 性別: ${userData.sex === 'male' ? '男性' : '女性'}
 BMI: ${bmi}
-
 [分析結果]
-推定余命: ${result.le} 年 (寿命: ${result.lifespan} 歳)
+到達予測: ${deathYear}年 (寿命: ${result.lifespan} 歳)
+推定余命: あと${result.le} 年
 平均差: ${dSign}${result.diff} 年
-
 [経済的価値]
 損失: ${result.economic.currentLoss.value === 0 ? 'なし' : '-' + formatMoney(result.economic.currentLoss.value)}
 (範囲: ${formatMoney(result.economic.currentLoss.min)} - ${formatMoney(result.economic.currentLoss.max)})
 改善余地: ${result.economic.potentialGain.value === 0 ? 'なし' : '+' + formatMoney(result.economic.potentialGain.value)}
 (範囲: ${formatMoney(result.economic.potentialGain.min)} - ${formatMoney(result.economic.potentialGain.max)})
-
 [詳細]
 ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.toFixed(1)}年`).join('\n')}
 ============================================`;
@@ -231,7 +258,9 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
   const getAiAdvice = () => {
     // リスク因子ごとの推奨アクション定義
     const adviceMap: Record<string, string> = {
-      "現在喫煙": "禁煙",
+      "現在喫煙(軽)": "禁煙",
+      "現在喫煙(中)": "禁煙",
+      "現在喫煙(重)": "直ちに禁煙外来へ",
       "運動不足": "運動習慣の定着",
       "多量飲酒": "節酒",
       "肥満(重)": "減量",
@@ -250,7 +279,7 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
 
     // 影響度がマイナスのものを抽出し、マイナス幅が大きい順（昇順）にソートして、上位のアクションを取得
     const riskFactors = result.factors
-      .filter(f => f.impact < 0 && adviceMap[f.label])
+      .filter(f => f.impact < 0)
       .sort((a, b) => a.impact - b.impact);
 
     // リスク因子がない場合は称賛（経済的損失の有無に関わらず、健康状態が良いとみなす）
@@ -258,7 +287,13 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
          return <span>素晴らしい健康管理です！現在の生活習慣はあなたの強力な資産になっています。</span>;
     }
 
-    const topRisks = riskFactors.slice(0, 2).map(f => adviceMap[f.label]);
+    const topRisks = riskFactors.slice(0, 2).map(f => {
+        // 部分一致などを含めてマップから探す簡易ロジック
+        for (const key in adviceMap) {
+            if (f.label.includes(key) || key.includes(f.label)) return adviceMap[key];
+        }
+        return "生活習慣の改善";
+    });
     const uniqueRisks = Array.from(new Set(topRisks));
     const adviceList = uniqueRisks.join("・");
 
@@ -277,9 +312,14 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
          <div className="flex-1"><h4 className="font-bold text-blue-800 mb-1">AIヘルスコーチ</h4><div className="text-slate-800">{getAiAdvice()}</div></div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 主要指標: 西暦で表示 */}
+        <div className="p-6 rounded-lg border text-center bg-blue-50 border-blue-200">
+           <div className="text-sm text-slate-500 mb-1">到達予測 (没年)</div>
+           <div className="text-4xl font-black text-slate-800">{deathYear}<span className="text-lg font-bold ml-1">年</span></div>
+           <div className="text-xs text-slate-400 mt-2">満 {result.lifespan}歳</div>
+        </div>
         <MetricCard label="推定余命 (あと何年)" value={result.le} unit="年" sub={`同年代平均: ${result.official}年`} />
-        <MetricCard label="推定寿命" value={result.lifespan} unit="歳" sub={`生存確率50%到達年齢: ${result.median}歳`}/>
-        <MetricCard label="平均との差 (健康ボーナス)" value={result.diff} unit="年" prefix={result.diff >= 0 ? "+" : ""} highlight={true} sub="生活習慣の積み重ねの結果"/>
+        <MetricCard label="平均との差 (健康ボーナス)" value={result.diff} unit="年" prefix={result.diff >= 0 ? "+" : ""} highlight={false} sub="生活習慣の積み重ねの結果"/>
       </div>
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <div className="border-b border-slate-100 pb-4 mb-4 font-bold text-lg text-slate-800 flex items-center gap-2"><Activity className="w-5 h-5 text-blue-600" /> 寿命への影響因子（寄与年数）</div>
@@ -371,7 +411,7 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
             <button onClick={() => setIsShareModalOpen(true)} className="flex items-center justify-center gap-2 p-3 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 transition-colors">
                 <Share2 className="w-5 h-5" /> 結果をシェア
             </button>
-            <button onClick={() => copyResult(false)} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors">
+            <button onClick={() => copyResult(shareText, false)} className="flex items-center justify-center gap-2 p-3 bg-slate-600 text-white font-bold rounded-lg shadow hover:bg-slate-700 transition-colors">
                 <Copy className="w-5 h-5" /> 結果をコピー
             </button>
             <button onClick={handleDownloadReport} className="col-span-1 sm:col-span-2 flex items-center justify-center gap-2 p-3 bg-blue-600 text-white font-bold rounded-lg shadow hover:bg-blue-700 transition-colors relative overflow-hidden group">
@@ -391,9 +431,10 @@ ${result.factors.map(f => `・${f.label}: ${f.impact > 0 ? '+' : ''}${f.impact.t
       <ShareModal 
         isOpen={isShareModalOpen} 
         onClose={() => setIsShareModalOpen(false)} 
-        shareText={shareText} 
+        shareText={shareText}
+        groupShareText={groupShareText}
         appUrl={appUrl}
-        onCopy={() => copyResult(false)}
+        onCopy={copyResult}
       />
       
       {/* Support Section */}

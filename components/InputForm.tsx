@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserData, Sleep, Social, Diet, Pylori, AtrophicGastritis, Polypharmacy } from '../types';
-import { User, Activity, FileText, Calculator, HelpCircle } from 'lucide-react';
+import { User, Activity, FileText, Calculator, HelpCircle, Cigarette } from 'lucide-react';
 
 interface Props {
   data: UserData;
@@ -83,8 +83,24 @@ const InputForm: React.FC<Props> = ({ data, onChange, onAnalyze }) => {
           <Activity className="w-5 h-5 text-blue-600" /> 生活習慣・社会的因子
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-           <div><label className="block text-sm font-bold text-slate-600 mb-2">飲酒習慣</label><select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={data.alcohol} onChange={(e) => handleChange('alcohol', e.target.value as any)}><option value="none">飲まない</option><option value="moderate">適度 (1日1合程度)</option><option value="heavy">多量 (週450g以上)</option></select></div>
-           <div><label className="block text-sm font-bold text-slate-600 mb-2">喫煙歴</label><select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={data.smoking} onChange={(e) => handleChange('smoking', e.target.value as any)}><option value="never">吸わない (生涯非喫煙)</option><option value="past">過去に吸っていた</option><option value="current">吸っている</option></select></div>
+           <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">飲酒習慣</label>
+              <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={data.alcohol} onChange={(e) => handleChange('alcohol', e.target.value as any)}><option value="none">飲まない</option><option value="moderate">適度 (1日1合程度)</option><option value="heavy">多量 (週450g以上)</option></select>
+           </div>
+           <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">喫煙歴</label>
+              <select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={data.smoking} onChange={(e) => handleChange('smoking', e.target.value as any)}><option value="never">吸わない (生涯非喫煙)</option><option value="past">過去に吸っていた</option><option value="current">吸っている</option></select>
+              {data.smoking === 'current' && (
+                <div className="mt-3 bg-slate-50 p-3 rounded-lg border border-slate-200 animate-fade-in">
+                  <label className="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
+                    <div className="flex items-center gap-1"><Cigarette className="w-3 h-3" /> 1日の本数</div>
+                    <span className="text-blue-600 text-base">{data.cigarettesPerDay}本</span>
+                  </label>
+                  <input type="range" min="1" max="60" className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" value={data.cigarettesPerDay} onChange={(e) => handleChange('cigarettesPerDay', parseInt(e.target.value))} />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-1"><span>1本</span><span>30本</span><span>60本</span></div>
+                </div>
+              )}
+           </div>
            <div><label className="block text-sm font-bold text-slate-600 mb-2">運動習慣 (週2回以上)</label><select className="w-full p-3 border border-slate-300 rounded-lg bg-white" value={data.exercise} onChange={(e) => handleChange('exercise', e.target.value as any)}><option value="yes">あり</option><option value="no">なし</option></select></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
