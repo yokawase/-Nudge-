@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { SimulationResult, UserData } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { DollarSign, TrendingUp, Share2, Copy, HeartPulse, Download, Activity, Send, ThumbsUp, AlertTriangle, Mail, ChevronDown, ChevronUp, Check, X as XIcon, Twitter, MessageCircle, MoreHorizontal } from 'lucide-react';
@@ -69,7 +70,7 @@ const RiskFactorTable = () => {
     );
 };
 
-// Share Modal
+// Share Modal using React Portal
 const ShareModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -102,8 +103,9 @@ const ShareModal: React.FC<{
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+    // Use createPortal to render the modal at the body level
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" style={{margin: 0}}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden relative animate-scale-in">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <h3 className="font-bold text-slate-700">診断結果をシェア</h3>
@@ -156,7 +158,8 @@ const ShareModal: React.FC<{
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -173,7 +176,7 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
   const dSign = result.diff >= 0 ? "+" : "";
   const appUrl = "https://health-literacy-nudge.netlify.app/";
   
-  const shareText = `【Precision Health】診断結果\n到達予測: ${deathYear}年 (満${result.lifespan}歳)\n推定余命: あと${result.le}年\n平均との差: ${dSign}${result.diff}年\n#PrecisionHealth #ミライ査定`;
+  const shareText = `【Precision Health】診断結果\n到達予測: ${deathYear}年 (満${result.lifespan}歳)\n推定余命: あと${result.le}年\n平均との差: ${dSign}${result.diff}年\n\nあなたの余命と健康資産を可視化する「ミライ査定」\n${appUrl}\n#PrecisionHealth #ミライ査定`;
   const groupShareText = `【挑戦状】私の寿命予測は「${deathYear}年 (満${result.lifespan}歳)」でした！\n\nあなたの余命は西暦何年まで？\nグループのみんなでスコアを競ってみよう！\n\n診断はこちらから👇\n${appUrl}`;
 
   const showActionFeedback = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -182,7 +185,9 @@ const Dashboard: React.FC<Props> = ({ result, userData }) => {
   };
 
   const copyResult = async (textToCopy: string, silent = false) => {
-    const fullText = `${textToCopy}\n${appUrl}`;
+    // Note: textToCopy should already include the URL if needed.
+    const fullText = textToCopy;
+    
     const success = () => !silent && showActionFeedback("クリップボードにコピーしました");
     const fail = () => !silent && showActionFeedback("コピーに失敗しました", 'error');
 
